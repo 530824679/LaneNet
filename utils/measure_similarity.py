@@ -8,6 +8,10 @@
 # --------------------------------------
 
 import os
+import sys
+ros_path = '/opt/ros/kinetic/lib/python2.7/dist-packages'
+if ros_path in sys.path:
+    sys.path.remove(ros_path)
 import cv2
 import numpy as np
 from PIL import Image
@@ -15,7 +19,7 @@ from PIL import Image
 # 图片后缀
 def Postfix():
     postFix = set()
-    postFix.update([['bmp', 'jpg', 'png', 'tiff', 'gif', 'pcx', 'tga', 'exif',
+    postFix.update(['bmp', 'jpg', 'png', 'tiff', 'gif', 'pcx', 'tga', 'exif',
                     'fpx', 'svg', 'psd', 'cdr', 'pcd', 'dxf', 'ufo', 'eps', 'JPG', 'raw', 'jpeg'])
     return postFix
 
@@ -39,12 +43,8 @@ def ahash(image):
                 ahash_str = ahash_str + '1'
             else:
                 ahash_str = ahash_str + '0'
-    # 64位转换成16位Hash值
-    result = ''
-    for i in range(0, 64, 4):
-        result += ''.join('%x' % int(ahash_str[i: i + 4], 2))
-    print("ahash值：",result)
-    return result
+    # print("ahash值：",ahash_str)
+    return ahash_str
 
 # 感知哈希算法
 def phash(image):
@@ -59,19 +59,15 @@ def phash(image):
     # 计算均值
     avreage = np.mean(roi_dct)
     # 计算哈希值
-    hash_list = []
+    phash_str = ''
     for i in range(roi_dct.shape[0]):
         for j in range(roi_dct.shape[1]):
             if roi_dct[i, j] > avreage:
-                hash_list.append(1)
+                phash_str = phash_str + '1'
             else:
-                hash_list.append(0)
-    # 64位转换成16位Hash值
-    result = ''
-    for i in range(0, 64, 4):
-        result += ''.join('%x' % int(''.join(hash_list[i:i + 4]), 2))
-    print("phash值：", result)
-    return result
+                phash_str = phash_str + '0'
+    # print("phash值：",phash_str)
+    return phash_str
 
 # 差异哈希算法
 def dhash(image):
@@ -84,15 +80,11 @@ def dhash(image):
     for i in range(8):
         for j in range(8):
             if gray[i, j] > gray[i, j + 1]:
-                ahash_str = dhash_str + '1'
+                dhash_str = dhash_str + '1'
             else:
-                ahash_str = dhash_str + '0'
-    # 64位转换成16位Hash值
-    result = ''
-    for i in range(0, 64, 4):
-        result += ''.join('%x' % int(dhash_str[i: i + 4], 2))
-    # print("dhash值",result)
-    return result
+                dhash_str = dhash_str + '0'
+    # print("dhash值", dhash_str)
+    return dhash_str
 
 # 计算两张图之间的汉明距离
 def Hamming(hash1, hash2):
@@ -109,16 +101,19 @@ def Hamming(hash1, hash2):
 # 图片归一化
 def Normalize(image, size=(64, 64), greyscale=False):
     # 重新设置图片大小
-    image = image.resize(size, Image.ANTIALIAS)
+    image = cv2.resize(image, size, interpolation=cv2.INTER_CUBIC)
     if greyscale:
-        # 将图片转换为L模式，其为灰度图，其每个像素用8个bit表示
-        image = image.convert('L')
+        # 将图片转换为灰度图，其每个像素用8个bit表示
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     return image
 
 # 计算两张图之间的余弦距离
 def Cosine(image1, image2):
     image1 = Normalize(image1)
     image2 = Normalize(image2)
+
+    image1 = Image.fromarray(cv2.cvtColor(image1, cv2.COLOR_BGR2RGB))
+    image2 = Image.fromarray(cv2.cvtColor(image2, cv2.COLOR_BGR2RGB))
 
     images = [image1, image2]
     vectors = []
@@ -153,16 +148,40 @@ def Histogram(image_1, image_2):
     return degree
 
 if __name__ == '__main__':
-    threshold = 100
-    image_dir = ""
+    image_dir = "/home/chenwei/HDD/Project/datasets/segmentation/lane_dataset/高速通道/白天/image"
 
     postFix = Postfix()
     file_list = os.listdir(image_dir)
-    for file in file_list:
-        if str(file).split('.')[-1] in postFix:
-            image = Image.open(r'%s/%s' % (image_dir, str(file)))
-            diff =
+    file_list.sort()
 
+    cImage = cv2.imread(r'%s/%s' % (image_dir, str(file_list[0])))
+    sp = cImage.shape
+    top = int(sp[0] / 2)
+    bottom = int(sp[0])
+    cROI = cImage[:, top:bottom]
+    cValue = dhash(cROI)
 
+    count = 0
+    for index in range(1, len(file_list)):
+        if str(file_list[index]).split('.')[-1] in postFix:
+            image = cv2.imread(r'%s/%s' % (image_dir, str(file_list[index])))
+            roi = image[:, top:bottom]
+            value = dhash(roi)
 
+            #dis = Hamming(cValue, value)
+            dis = Cosine(cROI, roi)
+            print("Distance is: ", dis)
+
+            concat = np.hstack((cImage, image))
+            concat = cv2.resize(concat, (960, 360), interpolation=cv2.INTER_CUBIC)
+            cv2.line(concat, (0, 180), (960, 180), (0, 255, 0), 1, 4)
+
+            cv2.imshow("test", concat)
+            cv2.waitKey(75)
+            if dis < 0.9:
+                cv2.imwrite('/home/chenwei/HDD/Project/datasets/segmentation/lane_dataset/result/' + str(count) + '.png', cImage)
+                cImage = image
+                #cValue = value
+                cROI = roi
+                count += 1
 

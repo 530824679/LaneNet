@@ -9,7 +9,7 @@ cap = cv2.VideoCapture(0)
 count = 0
 while(cap.isOpened()):
     ret, frame = cap.read()
-    frame = cv2.resize(frame, (1024, 512))
+    frame = cv2.resize(frame, (1024, 768))
     cv2.imshow("capture", frame)
 
     key = cv2.waitKey(1) & 0xFF
