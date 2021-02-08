@@ -147,16 +147,15 @@ def Histogram(image_1, image_2):
     degree = degree / len(hist_1)
     return degree
 
-
-def correlation(img,kernal):
+def correlation(image, kernal):
     kernal_heigh = kernal.shape[0]
     kernal_width = kernal.shape[1]
-    cor_heigh = img.shape[0] - kernal_heigh + 1
-    cor_width = img.shape[1] - kernal_width + 1
+    cor_heigh = image.shape[0] - kernal_heigh + 1
+    cor_width = image.shape[1] - kernal_width + 1
     result = np.zeros((cor_heigh, cor_width), dtype=np.float64)
     for i in range(cor_heigh):
         for j in range(cor_width):
-            result[i][j] = (img[i:i + kernal_heigh, j:j + kernal_width] * kernal).sum()
+            result[i][j] = (image[i:i + kernal_heigh, j:j + kernal_width] * kernal).sum()
     return result
 
 def gaussian_2d_kernel(kernel_size=11, sigma=1.5):
@@ -177,54 +176,61 @@ def gaussian_2d_kernel(kernel_size=11, sigma=1.5):
     sum_val = 1 / sum_val
     return kernel * sum_val
 
-def ssim(distorted_image,original_image,window_size=11,gaussian_sigma=1.5,K1=0.01,K2=0.03,alfa=1,beta=1,gama=1):
-    distorted_image=np.array(distorted_image,dtype=np.float64)
-    original_image=np.array(original_image,dtype=np.float64)
-    if not distorted_image.shape == original_image.shape:
+def ssim(image_1, image_2, window_size=11, gaussian_sigma=1.5, K1=0.01, K2=0.03, alfa=1, beta=1, gama=1):
+    image_1 = cv2.cvtColor(image_1, cv2.COLOR_RGB2GRAY)
+    image_2 = cv2.cvtColor(image_2, cv2.COLOR_RGB2GRAY)
+
+    image_1=np.array(image_1,dtype=np.float64)
+    image_2=np.array(image_2,dtype=np.float64)
+
+    if not image_1.shape == image_2.shape:
         raise ValueError("Input Imagees must has the same size")
-    if len(distorted_image.shape) > 2:
+
+    if len(image_1.shape) > 2:
         raise ValueError("Please input the images with 1 channel")
+
     kernal=gaussian_2d_kernel(window_size,gaussian_sigma)
 
-    #求ux uy ux*uy ux^2 uy^2 sigma_x^2 sigma_y^2 sigma_xy等中间变量
-    ux=correlation(distorted_image,kernal)
-    uy=correlation(original_image,kernal)
-    distorted_image_sqr=distorted_image**2
-    original_image_sqr=original_image**2
-    dis_mult_ori=distorted_image*original_image
-    uxx=correlation(distorted_image_sqr,kernal)
-    uyy=correlation(original_image_sqr,kernal)
-    uxy=correlation(dis_mult_ori,kernal)
-    ux_sqr=ux**2
-    uy_sqr=uy**2
-    uxuy=ux*uy
-    sx_sqr=uxx-ux_sqr
-    sy_sqr=uyy-uy_sqr
-    sxy=uxy-uxuy
-    C1=(K1*255)**2
-    C2=(K2*255)**2
+    # 求ux uy ux*uy ux^2 uy^2 sigma_x^2 sigma_y^2 sigma_xy等中间变量
+    ux = correlation(image_1, kernal)
+    uy = correlation(image_2, kernal)
+    image_1_sqr = image_1 ** 2
+    image_2_sqr = image_2 ** 2
+    dis_mult_ori = image_1 * image_2
+
+    uxx = correlation(image_1_sqr, kernal)
+    uyy = correlation(image_2_sqr, kernal)
+    uxy = correlation(dis_mult_ori, kernal)
+    ux_sqr = ux ** 2
+    uy_sqr = uy ** 2
+    uxuy = ux * uy
+    sx_sqr = uxx - ux_sqr
+    sy_sqr = uyy - uy_sqr
+    sxy = uxy - uxuy
+    C1 = (K1 * 255) ** 2
+    C2 = (K2 * 255) ** 2
+
     #常用情况的SSIM
     if(alfa==1 and beta==1 and gama==1):
-        ssim=(2*uxuy+C1)*(2*sxy+C2)/(ux_sqr+uy_sqr+C1)/(sx_sqr+sy_sqr+C2)
+        ssim=(2 * uxuy + C1) * (2 * sxy + C2) / (ux_sqr + uy_sqr + C1) / (sx_sqr + sy_sqr + C2)
         return np.mean(ssim)
+
     #计算亮度相似性
-    l=(2*uxuy+C1)/(ux_sqr+uy_sqr+C1)
-    l=l**alfa
+    l = (2 * uxuy + C1) / (ux_sqr + uy_sqr + C1)
+    l = l ** alfa
+
     #计算对比度相似性
-    sxsy=np.sqrt(sx_sqr)*np.sqrt(sy_sqr)
-    c=(2*sxsy+C2)/(sx_sqr+sy_sqr+C2)
-    c=c**beta
+    sxsy = np.sqrt(sx_sqr) * np.sqrt(sy_sqr)
+    c= (2 * sxsy + C2) / (sx_sqr + sy_sqr + C2)
+    c= c ** beta
+
     #计算结构相似性
-    C3=0.5*C2
-    s=(sxy+C3)/(sxsy+C3)
-    s=s**gama
-    ssim=l*c*s
+    C3 = 0.5 * C2
+    s = (sxy + C3) / (sxsy + C3)
+    s = s ** gama
+
+    ssim = l * c * s
     return np.mean(ssim)
-
-
-
-
-
 
 if __name__ == '__main__':
     image_dir = "/home/chenwei/HDD/Project/datasets/segmentation/lane_dataset/高速通道/白天/image"
@@ -257,7 +263,7 @@ if __name__ == '__main__':
 
             cv2.imshow("test", concat)
             cv2.waitKey(75)
-            if dis < 0.9:
+            if dis < 0.6:
                 cv2.imwrite('/home/chenwei/HDD/Project/datasets/segmentation/lane_dataset/result/' + str(count) + '.png', cImage)
                 cImage = image
                 #cValue = value
