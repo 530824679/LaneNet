@@ -9,38 +9,29 @@
 # @IDE: PyCharm Community Edition
 # --------------------------------------
 
-from easydict import EasyDict as edict
+import os
 
-__C = edict()
-cfg = __C
+path_params = {
+    'data_path': "/home/chenwei/HDD/Project/datasets/segmentation/tusimple",
+    'test_files_list': 'REPO_ROOT_PATH/data/training_data_example/test.txt',
+    'train_files_list': 'REPO_ROOT_PATH/data/training_data_example/train.txt',
+    'val_files_list': 'REPO_ROOT_PATH/data/training_data_example/val.txt',
+    'logs_dir': './logs',
+    'tfrecord_dir': './tfrecord',
+    'checkpoints_dir': './checkpoints',
+}
 
-# Train options
-__C.TRAIN = edict()
+model_params = {
+    'resize_image_size': [720, 720],
+    'train_image_size': [512, 256],
+    'channels': 3,
+}
 
-# Set training epochs
-__C.TRAIN.EPOCHS = 200000
-# Set the display step
-__C.TRAIN.DISPLAY_STEP = 1
-# Set the momentum parameter of the optimizer
-__C.TRAIN.MOMENTUM = 0.9
-# Set the initial learning rate
-__C.TRAIN.LEARNING_RATE = 0.0005
-# Set the batch size
-__C.TRAIN.BATCH_SIZE = 8
-# Set the validation batch size
-__C.TRAIN.VAL_BATCH_SIZE = 8
-# Set the learning rate decay steps
-__C.TRAIN.LR_DECAY_STEPS = 400000
-# Set the learning rate decay rate
-__C.TRAIN.LR_DECAY_RATE = 0.1
-# Set the class numbers
-__C.TRAIN.CLASSES_NUMS = 2
-# Set the image height
-__C.TRAIN.IMG_HEIGHT = 256
-# Set the image width
-__C.TRAIN.IMG_WIDTH = 512
+solver_params = {
+    'batch_size': 8,
+    'total_epoches': 500,
+}
 
-# Test options
-__C.TEST = edict()
+test_params = {
 
-__C.TEST.GPU_MEMORY_FRACTION = 0.85
+}

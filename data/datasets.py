@@ -10,9 +10,43 @@
 # --------------------------------------
 
 import os
-import numpy as np
 import cv2
-from cfg.config import cfg
+import numpy as np
+import glog as log
+from cfg.config import *
+
+class DatasetProducer(object):
+    """
+    Convert raw image file into tfrecords
+    """
+    def __init__(self):
+        self.tfrecords_save_dir = os.path.join(path_params['tfrecord_dir'], 'train_tfrecords')
+        self.gt_image_dir = os.path.join(path_params['data_path'], 'gt_image')
+        self.gt_binary_image_dir = os.path.join(path_params['data_path'], 'gt_binary_image')
+        self.gt_instance_image_dir = os.path.join(path_params['data_path'], 'gt_instance_image')
+
+        if not self.check_data_complete():
+            raise ValueError('Source image data is not complete, please check if one of the image folder does not exist')
+
+    def check_data_complete(self):
+        """
+        Check if source data complete
+        :return:
+        """
+        return os.path.exists(self.gt_binary_image_dir) and \
+               os.path.exists(self.gt_instance_image_dir) and \
+               os.path.exists(self.gt_image_dir)
+
+    def generate_tfrecords(self):
+        """
+        Generate tensorflow records file
+        :return:
+        """
+        os.makedirs(self.tfrecords_save_dir, exist_ok=True)
+
+        log.info('Start generating training example tfrecords')
+
+
 
 class Dataset(object):
     def __init__(self, dataset_file):
